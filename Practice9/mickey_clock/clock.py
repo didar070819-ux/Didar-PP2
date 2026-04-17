@@ -1,34 +1,60 @@
 import pygame
-import math
-from datetime import datetime
+import datetime
+import os
 
 class MickeyClock:
-    def __init__(self, center_x, center_y):
-        self.center = (center_x, center_y)
+    def __init__(self, screen_width, screen_height):
+        self.screen_size = (screen_width, screen_height)
+        self.center = pygame.math.Vector2(screen_width // 2, screen_height // 2)
         
-        try:
-            self.bg_img = pygame.image.load("images/mickey_hand.png").convert()
-            self.bg_img = pygame.transform.scale(self.bg_img, (600, 600))
-        except Exception:
-            self.bg_img = pygame.Surface((600, 600))
-            self.bg_img.fill((255, 255, 255))
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        img_dir = os.path.join(base_dir, "images")
 
-    def draw_hand(self, surface, color, length, width, angle_degrees):
-        angle_radians = math.radians(angle_degrees - 90)
+        self.bg = pygame.image.load(os.path.join(img_dir, "clock.png"))
+        self.bg = pygame.transform.scale(self.bg, self.screen_size)
         
-        end_x = self.center[0] + length * math.cos(angle_radians)
-        end_y = self.center[1] + length * math.sin(angle_radians)
+        self.mickey_body = pygame.image.load(os.path.join(img_dir, "mikkey.png")).convert_alpha()
+        self.mickey_body = pygame.transform.scale(self.mickey_body, (380, 500)) 
+        self.mickey_rect = self.mickey_body.get_rect(center=self.center)
         
-        pygame.draw.line(surface, color, self.center, (end_x, end_y), width)
+        self.min_hand_orig = pygame.image.load(os.path.join(img_dir, "hand_right_centered.png")).convert_alpha()
+        self.min_hand_orig = pygame.transform.scale(self.min_hand_orig, (200, 300)) # Adjust to fit your clock
+        
+        self.sec_hand_orig = pygame.image.load(os.path.join(img_dir, "hand_left_centered.png")).convert_alpha()
+        self.sec_hand_orig = pygame.transform.scale(self.sec_hand_orig, (190, 280)) # Adjust to fit your clock
 
-    def draw(self, surface):
-        surface.blit(self.bg_img, (0, 0))
+    def blit_rotate_pivot(self, surface, image, pos, originPos, angle):
+        """
+        Rotates an image around a specific pivot point.
+        pos: The screen coordinate where the pivot should be (self.center).
+        originPos: The (x, y) pixel coordinate ON THE IMAGE acting as the shoulder/base.
+        """
+        image_rect = image.get_rect(topleft=(pos[0] - originPos[0], pos[1] - originPos[1]))
+        offset_center_to_pivot = pygame.math.Vector2(pos) - image_rect.center
         
-        current_time = datetime.now()
-        sec_angle = current_time.second * 6
-        min_angle = current_time.minute * 6 + (current_time.second * 0.1)
+        rotated_offset = offset_center_to_pivot.rotate(-angle)
+        
+        rotated_image_center = (pos[0] - rotated_offset.x, pos[1] - rotated_offset.y)
+        
+        rotated_image = pygame.transform.rotate(image, angle)
+        rotated_image_rect = rotated_image.get_rect(center=rotated_image_center)
+        
+        surface.blit(rotated_image, rotated_image_rect)
 
-        self.draw_hand(surface, (0, 0, 0), length=150, width=8, angle_degrees=min_angle)
-        self.draw_hand(surface, (255, 0, 0), length=200, width=3, angle_degrees=sec_angle)
+    def render(self, surface):
+        surface.blit(self.bg, (0, 0))
+        surface.blit(self.mickey_body, self.mickey_rect.topleft)
         
-        pygame.draw.circle(surface, (50, 50, 50), self.center, 12)
+        now = datetime.datetime.now()
+        
+        min_angle = -(now.minute * 6)
+        sec_angle = -(now.second * 6)
+
+        min_pivot_x = self.min_hand_orig.get_width() // 2
+        min_pivot_y = self.min_hand_orig.get_height()  
+        
+        sec_pivot_x = self.sec_hand_orig.get_width() // 2
+        sec_pivot_y = self.sec_hand_orig.get_height() 
+
+        self.blit_rotate_pivot(surface, self.min_hand_orig, self.center, (min_pivot_x, min_pivot_y), min_angle)
+        self.blit_rotate_pivot(surface, self.sec_hand_orig, self.center, (sec_pivot_x, sec_pivot_y), sec_angle)
