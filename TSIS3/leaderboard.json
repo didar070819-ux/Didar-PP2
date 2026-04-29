@@ -11,6 +11,16 @@
     },
     {
         "name": "Player",
+        "score": 61,
+        "distance": 610
+    },
+    {
+        "name": "Player",
+        "score": 53,
+        "distance": 538
+    },
+    {
+        "name": "Player",
         "score": 29,
         "distance": 296
     }
